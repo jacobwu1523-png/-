@@ -669,32 +669,3 @@
     </script>
 </body>
 </html>
-
-    // --- 鬧鐘與計時 ---
-    setInterval(() => {
-        const now = new Date();
-        document.getElementById('clock-display').innerText = now.toLocaleTimeString();
-        // 鬧鐘檢測
-        const alarm = document.getElementById('alarm-time').value;
-        if(alarm === now.toTimeString().substring(0,5)) {
-            // 此處可加鈴聲
-        }
-    }, 1000);
-
-    let tTimer;
-    function runTimer() {
-        const btn = document.getElementById('timer-btn');
-        let s = parseInt(document.getElementById('timer-sec').value);
-        if(isNaN(s)) return;
-        btn.innerText = "計時中";
-        tTimer = setInterval(() => {
-            s--;
-            if(s <= 0) { clearInterval(tTimer); alert("時間到！"); btn.innerText="開始倒數"; }
-        }, 1000);
-    }
-
-    window.onload = renderNotes;
-</script>
-</body>
-</html>
-
