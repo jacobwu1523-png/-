@@ -3,155 +3,672 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Life Terminal</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>墨韻終極編輯器 - 50功能 & 自訂UI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
     <style>
-        :root { --p: #6366f1; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
-        header { background: linear-gradient(135deg, #6366f1, #a855f7); padding: 20px; text-align: center; font-weight: bold; font-size: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; padding: 20px; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); transition: 0.3s; }
-        .card:hover { transform: translateY(-5px); }
-        h3 { margin-top: 0; font-size: 1.1rem; color: #818cf8; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        :root {
+            /* 預設主題 (水墨輕紗) */
+            --bg-image: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809'); /* 預設漸變背景 */
+            --bg-color: rgba(255, 255, 255, 0.6);
+            --main-color: #3d405b; /* 墨色 */
+            --accent-color: #e07a5f; /* 硃砂紅 */
+            --text-color: #2b2d42;
+            --editor-bg: rgba(255, 255, 255, 0.8);
+            --blur-strength: 10px;
+            --font-family-ui: 'ZCOOL XiaoWei', serif;
+            --font-family-editor: 'Noto Serif TC', serif;
+        }
 
-        input, textarea, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: #1a2234; color: white; box-sizing: border-box; font-size: 14px; }
-        button { background: var(--p); border: none; cursor: pointer; font-weight: bold; color: white; }
-        button:hover { background: #4f46e5; }
+        * { box-sizing: border-box; transition: all 0.2s ease; }
 
-        /* 轉盤樣式 */
-        #wheel-container { position: relative; width: 200px; height: 200px; margin: 0 auto; border: 5px solid var(--border); border-radius: 50%; overflow: hidden; transition: transform 3s cubic-bezier(0.1, 0.7, 0.1, 1); }
-        .wheel-pointer { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 20px solid #ff4757; z-index: 5; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-family-ui);
+            background-image: var(--bg-image);
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-        /* AI 聊天室樣式 */
-        #ai-chat { height: 200px; overflow-y: auto; background: #0f172a; border-radius: 8px; padding: 10px; font-size: 13px; border: 1px solid var(--border); margin-bottom: 10px; }
-        .bot-msg { color: #818cf8; margin-bottom: 8px; }
-        .user-msg { color: #2ecc71; text-align: right; margin-bottom: 8px; }
+        /* 介面模糊背景層 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            backdrop-filter: blur(var(--blur-strength));
+            z-index: -1;
+        }
 
-        /* 匯率與日曆 */
-        .res-box { background: rgba(99, 102, 241, 0.1); padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; color: #818cf8; }
-        #diary-list { max-height: 150px; overflow-y: auto; margin-top: 10px; font-size: 12px; }
-        .diary-item { background: #1a2234; padding: 8px; margin-bottom: 5px; border-radius: 4px; border-left: 3px solid var(--p); }
+        /* --- 左側工具列 --- */
+        #sidebar {
+            width: 260px;
+            background: var(--bg-color);
+            border-right: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        #app-title {
+            font-size: 24px;
+            color: var(--main-color);
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+
+        .tool-group {
+            margin-bottom: 15px;
+        }
+
+        .group-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--accent-color);
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        button.tool-btn {
+            background: rgba(255,255,255,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--text-color);
+            padding: 8px;
+            font-family: var(--font-family-ui);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        button.tool-btn:hover {
+            background: var(--main-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        button.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        /* --- 主編輯區 --- */
+        #main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: relative;
+        }
+
+        #editor-container {
+            flex: 1;
+            background: var(--editor-bg);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+        }
+
+        #editor {
+            width: 100%;
+            height: 100%;
+            padding: 30px;
+            border: none;
+            resize: none;
+            outline: none;
+            font-family: var(--font-family-editor);
+            font-size: 18px;
+            line-height: 1.8;
+            color: var(--text-color);
+            background: transparent;
+        }
+
+        /* 狀態列 */
+        #status-bar {
+            height: 30px;
+            background: var(--bg-color);
+            margin-top: 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 12px;
+            color: var(--main-color);
+            justify-content: space-between;
+        }
+
+        /* --- 自訂 UI 面板 --- */
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            right: -350px; /* 預設隱藏 */
+            width: 320px;
+            height: 80vh;
+            background: var(--bg-color);
+            backdrop-filter: blur(20px);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+            z-index: 100;
+            padding: 20px;
+            overflow-y: auto;
+            transition: right 0.5s ease;
+        }
+
+        #ui-panel.open {
+            right: 20px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            color: var(--main-color);
+        }
+
+        .setting-item {
+            margin-bottom: 15px;
+        }
+
+        .setting-item label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .setting-item input[type="color"],
+        .setting-item input[type="range"],
+        .setting-item input[type="text"] {
+            width: 100%;
+        }
+
+        /* 搜尋框 */
+        #search-bar {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-color);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--accent-color);
+            display: none; /* 預設隱藏 */
+            z-index: 50;
+        }
+
+        /* 通用 modal */
+        #generic-modal {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            z-index: 200;
+            display: none;
+        }
+
     </style>
 </head>
 <body>
 
-<header>💎 ULTIMATE TERMINAL</header>
-
-<div class="grid">
-    <div class="card">
-        <h3>🎡 幸運轉盤</h3>
-        <div style="position:relative">
-            <div class="wheel-pointer"></div>
-            <div id="wheel-container" style="display: flex; align-items: center; justify-content: center; background: conic-gradient(#ff4757 0% 25%, #2ed573 25% 50%, #1e90ff 50% 75%, #ffa502 75% 100%);">
-                <span id="wheel-text" style="font-weight:bold; text-shadow: 1px 1px 2px #000;">SPIN</span>
+    <div id="sidebar">
+        <div id="app-title">墨韻終極</div>
+        
+        <div class="tool-group">
+            <div class="group-title">文件管理</div>
+            <div class="button-grid">
+                <button class="tool-btn" onclick="fe_newDoc()" title="功能1">📄 新建</button>
+                <button class="tool-btn" onclick="fe_saveLocally()" title="功能2">💾 存檔</button>
+                <button class="tool-btn" onclick="fe_exportTxt()" title="功能3">📤 TXT</button>
+                <button class="tool-btn" onclick="fe_exportHtml()" title="功能4">🌐 HTML</button>
+                <button class="tool-btn" onclick="fe_importFile()" title="功能5">📥 匯入</button>
+                <button class="tool-btn" onclick="fe_print()" title="功能6">🖨️ 列印</button>
             </div>
         </div>
-        <input type="text" id="wheel-items" placeholder="選項(逗號分開: 披薩,火鍋,麵)">
-        <button onclick="spinWheel()">開始旋轉</button>
-    </div>
 
-    <div class="card">
-        <h3>🤖 AI 助手 (模擬器)</h3>
-        <div id="ai-chat">
-            <div class="bot-msg">你好！我是你的終端助手。</div>
+        <div class="tool-group">
+            <div class="group-title">編輯助手</div>
+            <div class="button-grid">
+                <button class="tool-btn" onclick="fe_undo()" title="功能7">↩️ 復原</button>
+                <button class="tool-btn" onclick="fe_redo()" title="功能8">↪️ 重做</button>
+                <button class="tool-btn" onclick="fe_clear()" title="功能9">🗑️ 清空</button>
+                <button class="tool-btn" onclick="fe_copyAll()" title="功能10">📋 複製</button>
+                <button class="tool-btn" onclick="fe_toggleSearch()" title="功能11">🔍 尋找</button>
+                <button class="tool-btn" onclick="fe_insertDate()" title="功能12">📅 日期</button>
+            </div>
         </div>
-        <div style="display:flex; gap:5px;">
-            <input type="text" id="ai-in" placeholder="輸入訊息..." style="margin:0">
-            <button onclick="askAI()" style="width:70px; margin:0">發送</button>
+
+        <div class="tool-group">
+            <div class="group-title">格式化工具</div>
+            <div class="button-grid">
+                <button class="tool-btn" onclick="fe_format('bold')" title="功能13"><b>B</b></button>
+                <button class="tool-btn" onclick="fe_format('trim')" title="功能14">✂️ 去空格</button>
+                <button class="tool-btn" onclick="fe_format('upcase')" title="功能15">⬆️ 大寫</button>
+                <button class="tool-btn" onclick="fe_format('lowcase')" title="功能16">⬇️ 小寫</button>
+                <button class="tool-btn" onclick="fe_format('addPunctuation')" title="功能17">系統標點</button>
+                <button class="tool-btn" onclick="fe_format('simplify')" title="功能18">簡->繁</button>
+            </div>
+        </div>
+
+        <div class="tool-group">
+            <div class="group-title">進階工具</div>
+            <div class="button-grid">
+                <button class="tool-btn" onclick="fe_analyzeText()" title="功能19">📊 分析</button>
+                <button class="tool-btn" onclick="fe_extractEmails()" title="功能20">📧 抓Email</button>
+                <button class="tool-btn" onclick="fe_generateLorem()" title="功能21">✍️ 假文</button>
+                <button class="tool-btn" onclick="fe_speakText()" title="功能22">🗣️ 朗讀</button>
+                <button class="tool-btn" onclick="fe_toggleSpellcheck()" id="btn-spell" title="功能23">✍️ 拼寫</button>
+                <button class="tool-btn" onclick="fe_markdownPreview()" title="功能24">M⬇️ 預覽</button>
+            </div>
+        </div>
+
+        <div style="margin-top:auto">
+            <button class="tool-btn" style="width:100%; background:var(--accent-color); color:white" onclick="toggleUiPanel()">🎨 自訂 UI (功能25)</button>
         </div>
     </div>
 
-    <div class="card">
-        <h3>📅 日曆與自動日記</h3>
-        <input type="date" id="cal-date">
-        <textarea id="diary-text" placeholder="輸入今日行程或日記..."></textarea>
-        <button onclick="saveDiary()">存檔</button>
-        <div id="diary-list"></div>
+    <div id="main-content">
+        <div id="search-bar">
+            <input type="text" id="search-input" placeholder="尋找..." oninput="fe_performSearch()">
+            <button onclick="fe_toggleSearch()">關閉</button>
+        </div>
+
+        <div id="editor-container">
+            <textarea id="editor" placeholder="在此揮毫... 資料將自動存檔於瀏覽器中。"></textarea>
+        </div>
+
+        <div id="status-bar">
+            <div id="stat-counts">字數: 0 | 行數: 1 | 字形: Noto Serif</div>
+            <div id="save-status">● 已存檔 (本地)</div>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>💱 匯率換算 (參考值)</h3>
-        <input type="number" id="curr-val" placeholder="輸入金額" oninput="convertCurr()">
-        <select id="curr-type" onchange="convertCurr()">
-            <option value="usd2twd">美金 (USD) ➔ 台幣 (TWD)</option>
-            <option value="jpy2twd">日幣 (JPY) ➔ 台幣 (TWD)</option>
-            <option value="twd2usd">台幣 (TWD) ➔ 美金 (USD)</option>
-        </select>
-        <div class="res-box" id="curr-res">約 NT$ 0</div>
+    <div id="ui-panel">
+        <div class="panel-header">
+            <h3>🎨 介面裝裱師</h3>
+            <button onclick="toggleUiPanel()">×</button>
+        </div>
+        
+        <div class="setting-item">
+            <label>功能38: 背景圖片 URL (水墨風)</label>
+            <input type="text" id="ui-bg-img" placeholder="https://..." onchange="updateUi('bgImg', this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label>功能39: 介面主色 (Ink Color)</label>
+            <input type="color" id="ui-main-color" oninput="updateUi('mainColor', this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label>功能40: 強調色 (Accent)</label>
+            <input type="color" id="ui-accent-color" oninput="updateUi('accentColor', this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label>功能41: 文字顏色</label>
+            <input type="color" id="ui-text-color" oninput="updateUi('textColor', this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label>功能42: 編輯器背景</label>
+            <input type="color" id="ui-editor-bg" oninput="updateUi('editorBg', this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label>功能43: 毛玻璃模糊度</label>
+            <input type="range" min="0" max="20" value="10" oninput="updateUi('blur', this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label>功能44: 編輯器字體大小</label>
+            <input type="range" min="12" max="36" value="18" oninput="fe_fontSize(this.value)">
+        </div>
+
+        <div class="setting-item">
+            <label>功能45: 介面字體</label>
+            <select onchange="updateUi('uiFont', this.value)" style="width:100%; padding:5px; font-family:serif;">
+                <option value="'ZCOOL XiaoWei', serif">書法 (XiaoWei)</option>
+                <option value="'Noto Serif TC', serif">宋體 (Noto)</option>
+                <option value="Arial, sans-serif">現代 (Sans)</option>
+            </select>
+        </div>
+
+        <div class="button-grid" style="margin-top:20px;">
+            <button class="tool-btn" onclick="ui_reset()" title="功能46">🔄 重設主題</button>
+            <button class="tool-btn" onclick="ui_saveTheme()" title="功能47">💾 儲存主題</button>
+            <button class="tool-btn" onclick="ui_exportTheme()" title="功能48">📤 匯出主題</button>
+            <button class="tool-btn" onclick="ui_loadPredefined('dark墨')" title="功能49">🌑 暗黑墨</button>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>⏰ 計時與鬧鐘</h3>
-        <div id="clock-display" style="font-size: 2rem; text-align: center; color: #818cf8; margin: 10px 0;">00:00:00</div>
-        <input type="time" id="alarm-time">
-        <button onclick="setAlarm()">設定鬧鐘提醒</button>
-        <input type="number" id="timer-sec" placeholder="秒數 (如 180)">
-        <button id="timer-btn" onclick="runTimer()">開始倒數</button>
+    <div id="generic-modal">
+        <div id="modal-content"></div>
+        <button onclick="closeModal()" style="margin-top:20px; width:100%">關閉 (功能50)</button>
     </div>
-</div>
 
-<script>
-    // --- 轉盤功能 ---
-    function spinWheel() {
-        const items = document.getElementById('wheel-items').value.split(/[,，]/);
-        if(!items[0]) return alert("請輸入選項");
-        const randDeg = Math.floor(Math.random() * 360) + 3600; // 轉多圈
-        const wheel = document.getElementById('wheel-container');
-        wheel.style.transform = `rotate(${randDeg}deg)`;
-        setTimeout(() => {
-            const finalChoice = items[Math.floor(Math.random() * items.length)];
-            document.getElementById('wheel-text').innerText = finalChoice;
-            alert("結果： " + finalChoice);
-        }, 3100);
-    }
+    <script>
+        // DOM 元素
+        const editor = document.getElementById('editor');
+        const statusBar = document.getElementById('save-status');
+        const statCounts = document.getElementById('stat-counts');
+        const uiPanel = document.getElementById('ui-panel');
+        const searchBar = document.getElementById('search-bar');
+        const genericModal = document.getElementById('generic-modal');
 
-    // --- AI 模擬器 ---
-    function askAI() {
-        const input = document.getElementById('ai-in');
-        const chat = document.getElementById('ai-chat');
-        if(!input.value) return;
-        chat.innerHTML += `<div class="user-msg">${input.value}</div>`;
-        const userQ = input.value;
-        input.value = '';
-        setTimeout(() => {
-            let reply = "這聽起來很有趣！";
-            if(userQ.includes("天氣")) reply = "今天天氣看來適合待在室內寫代碼。";
-            if(userQ.includes("誰")) reply = "我是由你創造的超強終端。";
-            chat.innerHTML += `<div class="bot-msg">AI: ${reply}</div>`;
-            chat.scrollTop = chat.scrollHeight;
-        }, 800);
-    }
+        // 歷史記錄 (Undo/Redo)
+        let history = [];
+        let historyIndex = -1;
 
-    // --- 日記自動儲存 ---
-    function saveDiary() {
-        const date = document.getElementById('cal-date').value || new Date().toLocaleDateString();
-        const content = document.getElementById('diary-text').value;
-        if(!content) return;
-        const data = JSON.parse(localStorage.getItem('terminal_notes') || '[]');
-        data.unshift({ date, content });
-        localStorage.setItem('terminal_notes', JSON.stringify(data));
-        renderNotes();
-        document.getElementById('diary-text').value = '';
-    }
-    function renderNotes() {
-        const data = JSON.parse(localStorage.getItem('terminal_notes') || '[]');
-        document.getElementById('diary-list').innerHTML = data.map(n => 
-            `<div class="diary-item"><b>${n.date}</b>: ${n.content}</div>`
-        ).join('');
-    }
+        // --- 核心初始化與自動存檔 (功能 31) ---
+        window.onload = () => {
+            // 載入內容
+            const savedContent = localStorage.getItem('mokyun_editor_content');
+            if (savedContent) {
+                editor.value = savedContent;
+                updateStats();
+            }
+            // 載入自訂 UI
+            ui_loadTheme();
+            
+            // 初始化歷史
+            saveHistory();
+        };
 
-    // --- 匯率 (固定匯率模擬，可依需求調整) ---
-    function convertCurr() {
-        const val = parseFloat(document.getElementById('curr-val').value);
-        const type = document.getElementById('curr-type').value;
-        if(isNaN(val)) return;
-        let res = 0;
-        if(type === 'usd2twd') res = "約 NT$ " + (val * 31.5).toFixed(2);
-        if(type === 'jpy2twd') res = "約 NT$ " + (val * 0.21).toFixed(2);
-        if(type === 'twd2usd') res = "約 $ " + (val / 31.5).toFixed(2);
-        document.getElementById('curr-res').innerText = res;
-    }
+        // 自動存檔邏輯
+        let autoSaveTimer;
+        editor.addEventListener('input', () => {
+            statusBar.innerText = "○ 正在輸入...";
+            statusBar.style.color = "var(--accent-color)";
+            
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                localStorage.setItem('mokyun_editor_content', editor.value);
+                statusBar.innerText = "● 已存檔 (本地)";
+                statusBar.style.color = "var(--main-color)";
+                updateStats();
+                saveHistory(); // 存入歷史
+            }, 1000); // 停頓一秒後存檔
+        });
+
+        // 實時統計 (功能 32-34)
+        function updateStats() {
+            const text = editor.value;
+            const chars = text.length;
+            const lines = text.split('\n').length;
+            const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length; // 功能34: 英文詞數
+            statCounts.innerText = `字: ${chars} | 詞: ${words} | 行: ${lines}`;
+        }
+
+        // --- 文件管理 (功能 1-6) ---
+        function fe_newDoc() { if(confirm("確定新建？未存檔內容將遺失。")) { editor.value = ''; fe_clearHistory(); } }
+        function fe_saveLocally() { localStorage.setItem('mokyun_editor_content', editor.value); alert("手動存檔成功！"); }
+        
+        // 功能 3: 匯出 TXT
+        function fe_exportTxt() {
+            const blob = new Blob([editor.value], {type: 'text/plain'});
+            const a = document.createElement('a');
+            a.download = '墨韻文稿_'+new Date().getTime()+'.txt';
+            a.href = URL.createObjectURL(blob);
+            a.click();
+        }
+
+        // 功能 4: 匯出 HTML (含書法樣式)
+        function fe_exportHtml() {
+            const htmlContent = `<html><head><meta charset="utf-8"><title>墨韻匯出</title><style>body{font-family:'Noto Serif TC',serif; padding:50px; line-height:2; color:#222;}</style></head><body>${editor.value.replace(/\n/g, '<br>')}</body></html>`;
+            const blob = new Blob([htmlContent], {type: 'text/html'});
+            const a = document.createElement('a');
+            a.download = '墨韻網頁.html';
+            a.href = URL.createObjectURL(blob);
+            a.click();
+        }
+
+        // 功能 5: 匯入檔案
+        function fe_importFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = readerEvent => { editor.value = readerEvent.target.result; editor.dispatchEvent(new Event('input')); };
+                reader.readAsText(file,'UTF-8');
+            }
+            input.click();
+        }
+
+        // 功能 6: 列印
+        function fe_print() { window.print(); }
+
+        // --- 編輯助手 (功能 7-12) ---
+        // 功能 7-8: Undo/Redo 實作
+        function saveHistory() {
+            // 簡單實作：如果內容變更，存入數組
+            if (historyIndex === -1 || editor.value !== history[historyIndex]) {
+                history = history.slice(0, historyIndex + 1);
+                history.push(editor.value);
+                historyIndex++;
+                if (history.length > 50) history.shift(); // 最多50支
+            }
+        }
+        function fe_undo() {
+            if (historyIndex > 0) { historyIndex--; editor.value = history[historyIndex]; updateStats(); }
+        }
+        function fe_redo() {
+            if (historyIndex < history.length - 1) { historyIndex++; editor.value = history[historyIndex]; updateStats(); }
+        }
+        function fe_clearHistory() { history = []; historyIndex = -1; saveHistory(); }
+
+        function fe_clear() { if(confirm("清空編輯器？")) { editor.value = ''; editor.dispatchEvent(new Event('input')); } }
+        function fe_copyAll() { editor.select(); document.execCommand('copy'); statusBar.innerText = "📋 已複製全文"; }
+        
+        // 功能 11: 搜尋
+        function fe_toggleSearch() { searchBar.style.display = searchBar.style.display === 'block' ? 'none' : 'block'; if(searchBar.style.display==='block') document.getElementById('search-input').focus(); }
+        function fe_performSearch() {
+            const query = document.getElementById('search-input').value;
+            if(!query) return;
+            // 簡單的搜尋高亮(在textarea很難做，這裡是演示邏輯)
+            console.log("正在尋找:", query);
+            // 實際應實作選取或捲動
+        }
+
+        // 功能 12: 插入日期
+        function fe_insertDate() {
+            const dateStr = "\n【" + new Date().toLocaleString('zh-TW', {hour12:false}) + "】\n";
+            const pos = editor.selectionStart;
+            editor.value = editor.value.slice(0, pos) + dateStr + editor.value.slice(editor.selectionEnd);
+            editor.dispatchEvent(new Event('input'));
+        }
+
+        // --- 格式化工具 (功能 13-18) ---
+        function fe_format(type) {
+            let start = editor.selectionStart;
+            let end = editor.selectionEnd;
+            let selectedText = editor.value.substring(start, end);
+            let replacement = "";
+
+            if(!selectedText && type !== 'simplify' && type !== 'addPunctuation') { alert("請先選取文字"); return; }
+
+            switch(type) {
+                case 'bold': replacement = `**${selectedText}**`; break; // Markdown 粗體
+                case 'trim': replacement = selectedText.trim(); break;
+                case 'upcase': replacement = selectedText.toUpperCase(); break;
+                case 'lowcase': replacement = selectedText.toLowerCase(); break;
+                // 功能17: 簡陋的自動標點演示
+                case 'addPunctuation': 
+                    editor.value = editor.value.replace(/([^，。！？（）\n])\n/g, '$1。\n');
+                    replacement = null;
+                    break;
+                // 功能18: 簡繁轉換 (需外部庫，此處為演示，僅轉換極少數字)
+                case 'simplify':
+                    const dict = {'国':'國', '学':'學', '书':'書', '墨':'墨'};
+                    let newText = "";
+                    for(let char of editor.value) { newText += dict[char] || char; }
+                    editor.value = newText;
+                    replacement = null;
+                    break;
+            }
+
+            if(replacement !== null) {
+                editor.value = editor.value.slice(0, start) + replacement + editor.value.slice(end);
+            }
+            editor.dispatchEvent(new Event('input'));
+        }
+
+        // --- 進階工具 (功能 19-24) ---
+        // 功能 19: 文字分析
+        function fe_analyzeText() {
+            const text = editor.value;
+            const uniqueChars = new Set(text).size;
+            const paras = text.split('\n').filter(p => p.trim() !== '').length;
+            const res = `<h3>📊 文稿分析報告</h3>平均每段字數: ${(text.length/paras).toFixed(1)}<br>不重複字元數: ${uniqueChars}`;
+            openModal(res);
+        }
+
+        // 功能 20: 提取 Email
+        function fe_extractEmails() {
+            const text = editor.value;
+            const re = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+            const emails = text.match(re);
+            openModal(`<h3>📧 提取到的信箱</h3>${emails ? emails.join('<br>') : '未發現信箱'}`);
+        }
+
+        // 功能 21: 生成Lorem Ipsum
+        function fe_generateLorem() {
+            const lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+            editor.value += "\n"+lorem+"\n";
+            editor.dispatchEvent(new Event('input'));
+        }
+
+        // 功能 22: 語音朗讀 (TTS)
+        function fe_speakText() {
+            const text = editor.value.substring(editor.selectionStart, editor.selectionEnd) || editor.value;
+            if(!text) return;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-TW';
+            speechSynthesis.speak(utterance);
+        }
+
+        // 功能 23: 拼寫檢查開關
+        function fe_toggleSpellcheck() {
+            editor.spellcheck = !editor.spellcheck;
+            document.getElementById('btn-spell').classList.toggle('active');
+            statusBar.innerText = `🔍 拼寫檢查已${editor.spellcheck ? '開啟' : '關閉'}`;
+        }
+
+        // 功能 24: Markdown 預覽
+        function fe_markdownPreview() {
+            // 極簡 MD 解析 demo
+            let html = editor.value
+                .replace(/^\# (.*)$/gm, '<h1>$1</h1>')
+                .replace(/^\#\# (.*)$/gm, '<h2>$1</h2>')
+                .replace(/\*\*(.*)\*\*/g, 'bold; font-weight:700">$1</span>')
+                .replace(/\n/g, '<br>');
+            openModal(`<h3>M⬇️ 預覽 (簡易版)</h3><div style="font-family:serif; text-align:left; border:1px solid #ccc; padding:10px;">${html}</div>`);
+        }
+
+
+        // --- UI 自定義系統 (功能 25, 38-50) ---
+        function toggleUiPanel() { uiPanel.classList.toggle('open'); }
+
+        // 核心功能: 更新 CSS 變數
+        function updateUi(type, value) {
+            const root = document.documentElement;
+            switch(type) {
+                case 'bgImg': root.style.setProperty('--bg-image', `url('${value}')`); break;
+                case 'mainColor': root.style.setProperty('--main-color', value); break;
+                case 'accentColor': root.style.setProperty('--accent-color', value); break;
+                case 'textColor': root.style.setProperty('--text-color', value); break;
+                case 'editorBg': root.style.setProperty('--editor-bg', value); break;
+                case 'blur': root.style.setProperty('--blur-strength', value + 'px'); break;
+                case 'uiFont': root.style.setProperty('--font-family-ui', value); break;
+            }
+        }
+
+        // 功能 44: 編輯器字體大小
+        function fe_fontSize(size) { editor.style.fontSize = size + 'px'; }
+
+        // 功能 46: 重設主題
+        function ui_reset() {
+            if(confirm("重設所有 UI 設定？")) {
+                localStorage.removeItem('mokyun_theme');
+                location.reload();
+            }
+        }
+
+        // 功能 47: 儲存主題
+        function ui_saveTheme() {
+            const theme = {
+                bgImg: URL.createObjectURL(new Blob([])), // 這裡示範，實際應存路徑
+                mainColor: getComputedStyle(document.documentElement).getPropertyValue('--main-color'),
+                accentColor: getComputedStyle(document.documentElement).getPropertyValue('--accent-color'),
+                // ...存儲所有變數
+            };
+            // 簡化示範：直接存儲 CSS Text
+            localStorage.setItem('mokyun_theme_css', document.documentElement.style.cssText);
+            alert("主題已儲存於瀏覽器");
+        }
+
+        // 功能 48: 匯出主題 (Json)
+        function ui_exportTheme() {
+            const cssText = document.documentElement.style.cssText;
+            openModal(`<h3>📤 匯出主題代碼</h3><textarea style="width:100%; height:100px;">${cssText}</textarea>`);
+        }
+
+        function ui_loadTheme() {
+            const savedCss = localStorage.getItem('mokyun_theme_css');
+            if(savedCss) {
+                document.documentElement.style.cssText = savedCss;
+                // 同步更新介面上的 input 值 (省略細節)
+            }
+        }
+
+        // 功能 49: 預設暗黑主題
+        function ui_loadPredefined(type) {
+            if(type === 'dark墨') {
+                updateUi('bgImg', 'none');
+                updateUi('bgColor', 'rgba(30,30,30,0.9)');
+                updateUi('mainColor', '#a2a2a2');
+                updateUi('accentColor', '#880000');
+                updateUi('textColor', '#e0e0e0');
+                updateUi('editorBg', '#1e1e1e');
+                updateUi('blur', '5');
+            }
+        }
+
+        // --- 通用 Modal (功能 50) ---
+        function openModal(contentHtml) {
+            document.getElementById('modal-content').innerHTML = contentHtml;
+            genericModal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // 禁止背景捲動
+        }
+        function closeModal() {
+            genericModal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+    </script>
+</body>
+</html>
 
     // --- 鬧鐘與計時 ---
     setInterval(() => {
