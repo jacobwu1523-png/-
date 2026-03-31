@@ -1,1 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Life Terminal</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root { --p: #6366f1; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
+        header { background: linear-gradient(135deg, #6366f1, #a855f7); padding: 20px; text-align: center; font-weight: bold; font-size: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; padding: 20px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); transition: 0.3s; }
+        .card:hover { transform: translateY(-5px); }
+        h3 { margin-top: 0; font-size: 1.1rem; color: #818cf8; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+
+        input, textarea, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: #1a2234; color: white; box-sizing: border-box; font-size: 14px; }
+        button { background: var(--p); border: none; cursor: pointer; font-weight: bold; color: white; }
+        button:hover { background: #4f46e5; }
+
+        /* 轉盤樣式 */
+        #wheel-container { position: relative; width: 200px; height: 200px; margin: 0 auto; border: 5px solid var(--border); border-radius: 50%; overflow: hidden; transition: transform 3s cubic-bezier(0.1, 0.7, 0.1, 1); }
+        .wheel-pointer { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 20px solid #ff4757; z-index: 5; }
+
+        /* AI 聊天室樣式 */
+        #ai-chat { height: 200px; overflow-y: auto; background: #0f172a; border-radius: 8px; padding: 10px; font-size: 13px; border: 1px solid var(--border); margin-bottom: 10px; }
+        .bot-msg { color: #818cf8; margin-bottom: 8px; }
+        .user-msg { color: #2ecc71; text-align: right; margin-bottom: 8px; }
+
+        /* 匯率與日曆 */
+        .res-box { background: rgba(99, 102, 241, 0.1); padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; color: #818cf8; }
+        #diary-list { max-height: 150px; overflow-y: auto; margin-top: 10px; font-size: 12px; }
+        .diary-item { background: #1a2234; padding: 8px; margin-bottom: 5px; border-radius: 4px; border-left: 3px solid var(--p); }
+    </style>
+</head>
+<body>
+
+<header>💎 ULTIMATE TERMINAL</header>
+
+<div class="grid">
+    <div class="card">
+        <h3>🎡 幸運轉盤</h3>
+        <div style="position:relative">
+            <div class="wheel-pointer"></div>
+            <div id="wheel-container" style="display: flex; align-items: center; justify-content: center; background: conic-gradient(#ff4757 0% 25%, #2ed573 25% 50%, #1e90ff 50% 75%, #ffa502 75% 100%);">
+                <span id="wheel-text" style="font-weight:bold; text-shadow: 1px 1px 2px #000;">SPIN</span>
+            </div>
+        </div>
+        <input type="text" id="wheel-items" placeholder="選項(逗號分開: 披薩,火鍋,麵)">
+        <button onclick="spinWheel()">開始旋轉</button>
+    </div>
+
+    <div class="card">
+        <h3>🤖 AI 助手 (模擬器)</h3>
+        <div id="ai-chat">
+            <div class="bot-msg">你好！我是你的終端助手。</div>
+        </div>
+        <div style="display:flex; gap:5px;">
+            <input type="text" id="ai-in" placeholder="輸入訊息..." style="margin:0">
+            <button onclick="askAI()" style="width:70px; margin:0">發送</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📅 日曆與自動日記</h3>
+        <input type="date" id="cal-date">
+        <textarea id="diary-text" placeholder="輸入今日行程或日記..."></textarea>
+        <button onclick="saveDiary()">存檔</button>
+        <div id="diary-list"></div>
+    </div>
+
+    <div class="card">
+        <h3>💱 匯率換算 (參考值)</h3>
+        <input type="number" id="curr-val" placeholder="輸入金額" oninput="convertCurr()">
+        <select id="curr-type" onchange="convertCurr()">
+            <option value="usd2twd">美金 (USD) ➔ 台幣 (TWD)</option>
+            <option value="jpy2twd">日幣 (JPY) ➔ 台幣 (TWD)</option>
+            <option value="twd2usd">台幣 (TWD) ➔ 美金 (USD)</option>
+        </select>
+        <div class="res-box" id="curr-res">約 NT$ 0</div>
+    </div>
+
+    <div class="card">
+        <h3>⏰ 計時與鬧鐘</h3>
+        <div id="clock-display" style="font-size: 2rem; text-align: center; color: #818cf8; margin: 10px 0;">00:00:00</div>
+        <input type="time" id="alarm-time">
+        <button onclick="setAlarm()">設定鬧鐘提醒</button>
+        <input type="number" id="timer-sec" placeholder="秒數 (如 180)">
+        <button id="timer-btn" onclick="runTimer()">開始倒數</button>
+    </div>
+</div>
+
+<script>
+    // --- 轉盤功能 ---
+    function spinWheel() {
+        const items = document.getElementById('wheel-items').value.split(/[,，]/);
+        if(!items[0]) return alert("請輸入選項");
+        const randDeg = Math.floor(Math.random() * 360) + 3600; // 轉多圈
+        const wheel = document.getElementById('wheel-container');
+        wheel.style.transform = `rotate(${randDeg}deg)`;
+        setTimeout(() => {
+            const finalChoice = items[Math.floor(Math.random() * items.length)];
+            document.getElementById('wheel-text').innerText = finalChoice;
+            alert("結果： " + finalChoice);
+        }, 3100);
+    }
+
+    // --- AI 模擬器 ---
+    function askAI() {
+        const input = document.getElementById('ai-in');
+        const chat = document.getElementById('ai-chat');
+        if(!input.value) return;
+        chat.innerHTML += `<div class="user-msg">${input.value}</div>`;
+        const userQ = input.value;
+        input.value = '';
+        setTimeout(() => {
+            let reply = "這聽起來很有趣！";
+            if(userQ.includes("天氣")) reply = "今天天氣看來適合待在室內寫代碼。";
+            if(userQ.includes("誰")) reply = "我是由你創造的超強終端。";
+            chat.innerHTML += `<div class="bot-msg">AI: ${reply}</div>`;
+            chat.scrollTop = chat.scrollHeight;
+        }, 800);
+    }
+
+    // --- 日記自動儲存 ---
+    function saveDiary() {
+        const date = document.getElementById('cal-date').value || new Date().toLocaleDateString();
+        const content = document.getElementById('diary-text').value;
+        if(!content) return;
+        const data = JSON.parse(localStorage.getItem('terminal_notes') || '[]');
+        data.unshift({ date, content });
+        localStorage.setItem('terminal_notes', JSON.stringify(data));
+        renderNotes();
+        document.getElementById('diary-text').value = '';
+    }
+    function renderNotes() {
+        const data = JSON.parse(localStorage.getItem('terminal_notes') || '[]');
+        document.getElementById('diary-list').innerHTML = data.map(n => 
+            `<div class="diary-item"><b>${n.date}</b>: ${n.content}</div>`
+        ).join('');
+    }
+
+    // --- 匯率 (固定匯率模擬，可依需求調整) ---
+    function convertCurr() {
+        const val = parseFloat(document.getElementById('curr-val').value);
+        const type = document.getElementById('curr-type').value;
+        if(isNaN(val)) return;
+        let res = 0;
+        if(type === 'usd2twd') res = "約 NT$ " + (val * 31.5).toFixed(2);
+        if(type === 'jpy2twd') res = "約 NT$ " + (val * 0.21).toFixed(2);
+        if(type === 'twd2usd') res = "約 $ " + (val / 31.5).toFixed(2);
+        document.getElementById('curr-res').innerText = res;
+    }
+
+    // --- 鬧鐘與計時 ---
+    setInterval(() => {
+        const now = new Date();
+        document.getElementById('clock-display').innerText = now.toLocaleTimeString();
+        // 鬧鐘檢測
+        const alarm = document.getElementById('alarm-time').value;
+        if(alarm === now.toTimeString().substring(0,5)) {
+            // 此處可加鈴聲
+        }
+    }, 1000);
+
+    let tTimer;
+    function runTimer() {
+        const btn = document.getElementById('timer-btn');
+        let s = parseInt(document.getElementById('timer-sec').value);
+        if(isNaN(s)) return;
+        btn.innerText = "計時中";
+        tTimer = setInterval(() => {
+            s--;
+            if(s <= 0) { clearInterval(tTimer); alert("時間到！"); btn.innerText="開始倒數"; }
+        }, 1000);
+    }
+
+    window.onload = renderNotes;
+</script>
+</body>
+</html>
 
